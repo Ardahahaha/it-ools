@@ -75,7 +75,7 @@ export const discoveryStats = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const [{ count: total }, { count: pending }, { count: approved }, { count: rejected }, todayRows, runs, avgRow] =
+    const [{ count: total }, { count: pending }, { count: approved }, { count: rejected }, todayRows, runs, avgRow, approvedBreakdown] =
       await Promise.all([
         supabaseAdmin.from("discovered_tools").select("id", { count: "exact", head: true }),
         supabaseAdmin.from("discovered_tools").select("id", { count: "exact", head: true }).eq("status", "pending"),
@@ -87,9 +87,29 @@ export const discoveryStats = createServerFn({ method: "GET" })
           .gte("detected_at", today.toISOString()),
         supabaseAdmin.from("discovery_runs").select("*").order("run_at", { ascending: false }).limit(10),
         supabaseAdmin.from("discovered_tools").select("score").eq("status", "pending"),
+        supabaseAdmin
+          .from("discovered_tools")
+          .select("suggested_category, level")
+          .eq("status", "approved"),
       ]);
     const scores = (avgRow.data ?? []).map((r) => r.score);
     const avgScore = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+
+    const byCategory: Record<string, number> = {};
+    const byLevel: Record<string, number> = { "Débutant": 0, "Intermédiaire": 0, "Avancé": 0, "Non défini": 0 };
+    for (const r of approvedBreakdown.data ?? []) {
+      const cat = (r as any).suggested_category || "Non catégorisé";
+      byCategory[cat] = (byCategory[cat] ?? 0) + 1;
+      const lvl = (r as any).level || "Non défini";
+      byLevel[lvl] = (byLevel[lvl] ?? 0) + 1;
+    }
+    const categories = Object.entries(byCategory)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+    const levels = Object.entries(byLevel)
+      .map(([name, count]) => ({ name, count }))
+      .filter((l) => l.count > 0);
+
     return {
       total: total ?? 0,
       pending: pending ?? 0,
@@ -98,6 +118,8 @@ export const discoveryStats = createServerFn({ method: "GET" })
       detectedToday: todayRows.count ?? 0,
       avgPendingScore: avgScore,
       recentRuns: runs.data ?? [],
+      categories,
+      levels,
     };
   });
 
