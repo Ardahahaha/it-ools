@@ -126,6 +126,63 @@ function AdminDiscovery() {
         <Kpi label="Total" value={s?.total ?? "—"} />
       </div>
 
+      {/* Répartition outils approuvés (en ligne) */}
+      {(s?.categories?.length || s?.levels?.length) ? (
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <div className="rounded-xl border border-border bg-gradient-card p-4">
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-cyber-cyan">
+                outils en ligne · par catégorie
+              </p>
+              <span className="font-mono text-[10px] text-muted-foreground">
+                {s?.approved ?? 0} approuvés
+              </span>
+            </div>
+            <div className="mt-3 space-y-2">
+              {(s?.categories ?? []).length === 0 && (
+                <p className="text-xs text-muted-foreground">Aucun outil approuvé.</p>
+              )}
+              {(s?.categories ?? []).map((c: { name: string; count: number }) => {
+                const max = Math.max(...(s?.categories ?? []).map((x: any) => x.count), 1);
+                const pct = Math.round((c.count / max) * 100);
+                return (
+                  <div key={c.name}>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-mono text-foreground/80 truncate">{c.name}</span>
+                      <span className="font-mono text-cyber-emerald">{c.count}</span>
+                    </div>
+                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-secondary/40">
+                      <div className="h-full bg-primary/70" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-gradient-card p-4">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-accent">
+              outils en ligne · par niveau
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {(s?.levels ?? []).map((l: { name: string; count: number }) => (
+                <div key={l.name} className="rounded-lg border border-border bg-background/40 p-3">
+                  <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {l.name}
+                  </p>
+                  <p className="mt-1 font-display text-2xl font-bold">{l.count}</p>
+                </div>
+              ))}
+              {(s?.levels ?? []).length === 0 && (
+                <p className="col-span-full text-xs text-muted-foreground">
+                  Aucun niveau renseigné sur les outils approuvés.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {/* Actions */}
       <div className="mt-4 flex flex-wrap gap-2">
         <button
